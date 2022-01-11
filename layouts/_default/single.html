@@ -1,0 +1,90 @@
+{{ define "body-class" }}
+    {{ $TOCEnabled := default (default false .Site.Params.article.toc) .Params.toc }}
+    {{- .Scratch.Set "hasTOC" (and (ge (len .TableOfContents) 100) $TOCEnabled) -}}
+    article-page {{ if (.Scratch.Get "hasTOC") }}has-toc{{ end }}
+{{ end }}
+
+{{ define "container-class" }}
+    {{ if (.Scratch.Get "hasTOC") }}
+        extended
+    {{ else }}
+        on-phone--column {{ if .Site.Params.widgets.enabled }}extended{{ else }}compact{{ end }}
+    {{ end }}
+{{ end }}
+
+{{ define "main" }}
+    {{ partial "article/article.html" . }}
+
+    {{ partial "article/components/related-contents" . }}
+     
+    <!-- 从这里开始 -->
+    
+    <script src='//cdn.jsdelivr.net/npm/@waline/client/dist/Waline.min.js'></script>
+    <div id="waline" class="waline-container"></div>
+    <style>
+        .waline-container {
+            background-color: var(--card-background);
+            border-radius: var(--card-border-radius);
+            box-shadow: var(--shadow-l1);
+            padding: var(--card-padding);
+        }
+        .waline-container .vcount {
+            color: var(--card-text-color-main);
+        }
+    </style>
+    
+    {{- with .Site.Params.comments.waline -}}
+    {{- $config := dict "el" "#waline" "dark" `html[data-scheme="dark"]` -}}
+    {{- $replaceKeys := dict "serverurl" "serverURL" "requiredmeta" "requiredMeta" "wordlimit" "wordLimit" "pagesize" "pageSize" "avatarcdn" "avatarCDN" "avatarforce" "avatarForce" -}}
+    
+    {{- range $key, $val := . -}}
+        {{- if $val -}}  
+            {{- $replaceKey := index $replaceKeys $key -}}
+            {{- $k := default $key $replaceKey -}}
+    
+            {{- $config = merge $config (dict $k $val) -}}
+        {{- end -}}
+    {{- end -}}
+    
+    <script>
+        /// Waline client configuration see: https://waline.js.org/en/reference/client.html
+        new Waline({{ $config | jsonify | safeJS }});
+    </script>
+    {{- end -}}
+
+    <!-- 到这里结束 -->
+
+    {{ partialCached "footer/footer" . }}
+
+    {{ partialCached "article/components/photoswipe" . }}
+{{ end }}
+
+{{ define "left-sidebar" }}
+    {{ if (.Scratch.Get "hasTOC") }}
+        <div id="article-toolbar">
+            <a href="{{ .Site.BaseURL | relLangURL }}" class="back-home">
+                {{ (resources.Get "icons/back.svg").Content | safeHTML }}
+                <span>{{ T "article.back" }}</span>
+            </a>
+        </div>
+    {{ else }}
+        {{ partial "sidebar/left.html" . }}
+    {{ end }}
+{{ end }}
+
+{{ define "right-sidebar" }}
+    {{ if (.Scratch.Get "hasTOC") }}
+        <aside class="sidebar right-sidebar sticky">
+            <section class="widget archives">
+                <div class="widget-icon">
+                    {{ partial "helper/icon" "hash" }}
+                </div>
+                <h2 class="widget-title section-title">{{ T "article.tableOfContents" }}</h2>
+                
+                <div class="widget--toc">
+                    {{ .TableOfContents }}
+                </div>
+            </section>
+        </aside>
+    {{ end }}
+{{ end }}
